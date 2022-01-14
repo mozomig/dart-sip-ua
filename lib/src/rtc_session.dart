@@ -2366,7 +2366,12 @@ class RTCSession extends EventManager {
           RTCSessionDescription(response.body, 'answer');
 
       try {
-        _connection.setRemoteDescription(answer);
+        if (_connection.signalingState != RTCSignalingState.RTCSignalingStateStable) {
+          logger.debug('RTCSignalingState ${_connection.signalingState} ${answer.sdp}');
+          _connection.setRemoteDescription(answer);
+        } else {
+          logger.debug('RTCSignalingState always stable ${answer.sdp}');
+        }
       } catch (error) {
         logger.error(
             'emit "peerconnection:setremotedescriptionfailed" [error:${error.toString()}]');
