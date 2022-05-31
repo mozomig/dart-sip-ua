@@ -37,6 +37,7 @@ class Message extends EventManager {
   NameAddrHeader _remote_identity;
   bool _is_replied;
   Map<String, dynamic> _data;
+
   String get direction => _direction;
 
   NameAddrHeader get local_identity => _local_identity;
@@ -69,8 +70,7 @@ class Message extends EventManager {
 
     extraHeaders.add('Content-Type: $contentType');
 
-    _request =
-        OutgoingRequest(SipMethod.MESSAGE, normalized, _ua, null, extraHeaders);
+    _request = OutgoingRequest(SipMethod.MESSAGE, normalized, _ua, null, extraHeaders);
     if (body != null) {
       _request.body = body;
     }
@@ -116,8 +116,7 @@ class Message extends EventManager {
     String body = options['body'];
 
     if (_direction != 'incoming') {
-      throw Exceptions.NotSupportedError(
-          '"accept" not supported for outgoing Message');
+      throw Exceptions.NotSupportedError('"accept" not supported for outgoing Message');
     }
 
     if (_is_replied != null) {
@@ -139,8 +138,7 @@ class Message extends EventManager {
     String body = options['body'];
 
     if (_direction != 'incoming') {
-      throw Exceptions.NotSupportedError(
-          '"reject" not supported for outgoing Message');
+      throw Exceptions.NotSupportedError('"reject" not supported for outgoing Message');
     }
 
     if (_is_replied != null) {
@@ -165,7 +163,7 @@ class Message extends EventManager {
       _succeeded('remote', response);
     } else {
       String cause = Utils.sipErrorCause(response.status_code);
-      _failed('remote', response.status_code, cause, response.reason_phrase);
+      _failed('remote', response.status_code, cause, response.reason_phrase, response.headers);
     }
   }
 
@@ -173,15 +171,14 @@ class Message extends EventManager {
     if (_closed != null) {
       return;
     }
-    _failed('system', 408, DartSIP_C.causes.REQUEST_TIMEOUT, 'Request Timeout');
+    _failed('system', 408, DartSIP_C.causes.REQUEST_TIMEOUT, 'Request Timeout', {});
   }
 
   void _onTransportError() {
     if (_closed != null) {
       return;
     }
-    _failed(
-        'system', 500, DartSIP_C.causes.CONNECTION_ERROR, 'Transport Error');
+    _failed('system', 500, DartSIP_C.causes.CONNECTION_ERROR, 'Transport Error', {});
   }
 
   void close() {
@@ -207,17 +204,21 @@ class Message extends EventManager {
     _ua.newMessage(this, originator, request);
   }
 
-  void _failed(
-      String originator, int status_code, String cause, String reason_phrase) {
+  void _failed(String originator, int status_code, String cause, String reason_phrase, Map<String, String> headers) {
     logger.debug('MESSAGE failed');
     close();
     logger.debug('emit "failed"');
-    emit(EventCallFailed(
+    emit(
+      EventCallFailed(
         originator: originator,
         cause: ErrorCause(
-            cause: cause,
-            status_code: status_code,
-            reason_phrase: reason_phrase)));
+          cause: cause,
+          status_code: status_code,
+          reason_phrase: reason_phrase,
+        ),
+        headers: headers,
+      ),
+    );
   }
 
   void _succeeded(String originator, IncomingResponse response) {
